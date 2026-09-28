@@ -23,23 +23,27 @@
 <body id="home">
   <a class="skip-link" href="#main">跳转到正文</a>
   <div class="page">
-    <aside class="sidebar" aria-label="个人信息与导航">
-      <header>
-        <h1>叶子森<span lang="en">Jason Ye</span></h1>
-        <p>西安电子科技大学<br>计算机科学与技术学院<br>硕士 · 中共党员</p>
-        <p class="contact-lines"><a href="mailto:jasonye247@gmail.com">jasonye247@gmail.com</a><br><a href="https://github.com/Jason-Yeah" target="_blank" rel="noopener noreferrer">GitHub / Jason-Yeah</a></p>
-      </header>
-      <nav aria-label="主导航">
-        <a href="#about">个人简介</a>
-        <a href="#interests">研究兴趣</a>
-        <a href="#research">论文与专利</a>
-        <a href="#awards">荣誉与资格</a>
-        <a href="#projects">项目与经历</a>
-        <a href="#skills">技能与学习</a>
-        <a href="#contact">联系我</a>
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">PERSONAL WEBSITE · 2026</p>
+        <h1>你好，我是<span>叶子森</span><span class="latin" lang="en">Jason Ye.</span></h1>
+        <p class="hero-summary">西安电子科技大学计算机科学与技术硕士<br>研究入侵检测与网络安全，也喜欢动手构建系统。</p>
+        <div class="hero-links"><a href="mailto:jasonye247@gmail.com">联系我 <span aria-hidden="true">↗</span></a><a href="https://github.com/Jason-Yeah" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a></div>
+      </div>
+      <nav aria-label="页面导航">
+        <a href="#about">个人简介</a><a href="#interests">研究兴趣</a><a href="#research">论文与专利</a><a href="#awards">荣誉与资格</a><a href="#projects">项目与经历</a><a href="#skills">技能与学习</a><a href="#contact">联系我</a>
       </nav>
-    </aside>
+    </header>
     <main id="main">
+      <section class="terminal-section" aria-labelledby="terminal-title">
+        <div class="section-heading"><div><p class="eyebrow">EXPLORE MY WORK</p><h2 id="terminal-title">项目终端</h2></div><span class="terminal-hint">输入 <code>help</code> 查看命令</span></div>
+        <div class="terminal" aria-label="个人项目交互终端">
+          <div class="terminal-bar"><div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div><span>jason — projects</span><button type="button" id="terminal-clear" aria-label="清空终端输出">清空</button></div>
+          <div id="terminal-output" class="terminal-output" role="log" aria-live="polite" aria-relevant="additions text"></div>
+          <form id="terminal-form" class="terminal-input-line" autocomplete="off"><label for="terminal-input" id="terminal-prompt">visitor@jason:~$</label><input id="terminal-input" name="command" type="text" spellcheck="false" aria-label="输入终端命令"><button type="submit" aria-label="执行命令">↵</button></form>
+        </div>
+        <p class="terminal-caption">这是一个只读的作品浏览器。仓库内容来自 GitHub 公开 API。</p>
+      </section>
       <section id="about" aria-labelledby="about-title">
         <h2 id="about-title">个人简介 <span lang="en">Biography</span></h2>
         <p>我是<strong>叶子森（Jason Ye）</strong>，硕士就读于<strong>西安电子科技大学计算机科学与技术学院</strong>，中共党员。我的研究方向是<strong>入侵检测与网络安全</strong>，关注网络流量中的威胁识别，以及安全防御方法的研究与实现。</p>
