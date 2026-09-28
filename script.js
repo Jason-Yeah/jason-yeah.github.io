@@ -1,4 +1,44 @@
 'use strict';
+const params = new URLSearchParams(location.search);
+const isEnglish = params.get('lang') === 'en';
+const languageToggle = document.getElementById('language-toggle');
+if (languageToggle) languageToggle.addEventListener('click', () => {
+  const next = new URL(location.href);
+  if (isEnglish) next.searchParams.delete('lang'); else next.searchParams.set('lang', 'en');
+  location.href = next.href;
+});
+if (isEnglish) {
+  document.documentElement.lang = 'en';
+  document.querySelector('.hero nav')?.setAttribute('aria-label', 'Page navigation');
+  document.title = 'Jason Ye | Personal Website';
+  const t = (selector, value, html = false) => { const node = document.querySelector(selector); if (node) html ? node.innerHTML = value : node.textContent = value; };
+  const nav = ['About', 'Research Interests', 'Publications & Patents', 'Awards', 'Projects & Experience', 'Skills & Learning', 'Contact'];
+  document.querySelectorAll('.hero nav a').forEach((a, i) => { if (nav[i]) a.textContent = nav[i]; });
+  t('.skip-link', 'Skip to content'); t('.hero h1', 'Hello, I’m<span> Jason Ye</span>', true);
+  t('.hero-summary', 'M.S. in Computer Science and Technology, Xidian University<br>Researching intrusion detection and cybersecurity, with a passion for building systems.', true);
+  t('.hero-links a:first-child', 'Contact ↗');
+  t('.terminal-hint', 'Enter <code>help</code> to see available commands', true);
+  t('#terminal-clear', 'Clear'); document.getElementById('terminal-clear')?.setAttribute('aria-label', 'Clear terminal output');
+  t('.terminal-caption', 'A read-only browser for my work. Repository contents are retrieved from the public GitHub API.');
+  t('#about', `<h2 id="about-title">About <span lang="en">Biography</span></h2><p>I’m <strong>Jason Ye (叶子森)</strong>, a CPC member and master’s student in the School of Computer Science and Technology at <strong>Xidian University</strong>. I conduct research with the Network and System Security (NSS) team at the Shaanxi Key Laboratory of Network and System Security. My work focuses on <strong>intrusion detection and cybersecurity</strong>, including threat identification in network traffic, agent security, and the research and implementation of security defenses.</p><p>I have published an EI-indexed international conference paper (NaNA 2026), received multiple invention patent grants, filed patent applications, and contributed to defense, national R&amp;D, and Huawei collaboration projects. These research and engineering experiences keep me focused on connecting security challenges with practical implementation.</p><p>For development, I work with C/C++ and Python and am interested in related software engineering roles.</p><p class="education"><strong>Education:</strong> M.S., School of Computer Science and Technology, Xidian University</p>`, true);
+  t('#interests', `<h2 id="interests-title">Research Interests <span lang="en">Research Interests</span></h2><ul><li><strong>Intrusion Detection:</strong> Network traffic analysis, anomaly identification, and malicious traffic detection.</li><li><strong>Cybersecurity:</strong> Network threat identification, security risk analysis, and dynamic defense.</li><li><strong>Systems Development:</strong> Building with C/C++ and Python and studying computer systems through a RISC-V emulator.</li><li><strong>AI Agent Development:</strong> Agent workflows, tool use, and task collaboration, explored through Python projects.</li></ul>`, true);
+  t('#research', `<h2 id="research-title">Publications &amp; Patents <span lang="en">Publications &amp; Patents</span></h2><h3>Conference Paper</h3><ol class="entries"><li><strong><a href="https://ieeexplore.ieee.org/document/11710201" target="_blank" rel="noopener noreferrer">MineTS: Robust Cryptomining Traffic Detection Based on Temporal-Statistical Learning.</a></strong><br><em>NaNA 2026</em> · EI-indexed conference paper · <a href="https://ieeexplore.ieee.org/document/11710201" target="_blank" rel="noopener noreferrer">IEEE Xplore ↗</a><p class="entry-note">Research topic: Cryptomining traffic detection using temporal and statistical learning, with an emphasis on robust identification.</p></li></ol><h3>Patents</h3><ol class="entries"><li><strong>Method and apparatus for dynamic security defense in wireless networks based on risk evolution reasoning.</strong><br>Invention patent, <span>CN122054149B</span>, <strong>Granted</strong>.<p class="entry-note">Research topic: Risk evolution reasoning and dynamic security defense for wireless networks.</p><details class="evidence-item"><summary>View invention patent certificate</summary><object data="docs/2026101610746-发明专利证书.pdf" type="application/pdf" aria-label="CN122054149B invention patent certificate"><p>PDF preview is unavailable. <a href="docs/2026101610746-发明专利证书.pdf" target="_blank" rel="noopener noreferrer">Open certificate</a></p></object></details></li><li><strong>Method and apparatus based on ******.</strong><br>Defense-related patent; details are redacted.</li><li><strong>Dynamic prediction method and system for unknown attacks based on adaptive Kalman filtering.</strong><br>Invention patent, filing no. 2026102128303, <strong>Granted</strong>.<details class="evidence-item"><summary>View patent grant certificate</summary><object data="docs/发明专利-授权证书-2026102128303-基于自适应卡尔曼滤波的未知攻击动态预测方法及系统.pdf" type="application/pdf"><p>PDF preview is unavailable. <a href="docs/发明专利-授权证书-2026102128303-基于自适应卡尔曼滤波的未知攻击动态预测方法及系统.pdf" target="_blank" rel="noopener noreferrer">Open certificate</a></p></object></details></li><li><strong>Continuous task risk analysis for industrial Internet.</strong><br>Invention patent application, filing no. 2026110454840, <strong>Accepted</strong>.<details class="evidence-item"><summary>View patent application receipt</summary><object data="docs/2026110454840-专利申请受理通知书.pdf" type="application/pdf"><p>PDF preview is unavailable. <a href="docs/2026110454840-专利申请受理通知书.pdf" target="_blank" rel="noopener noreferrer">Open receipt</a></p></object></details></li></ol>`, true);
+  t('#awards', `<h2 id="awards-title">Awards &amp; Qualifications <span lang="en">Awards &amp; Qualifications</span></h2><ul><li><strong>Third Prize, National Finals, 2nd China Graduate Open-source Innovation Competition in Operating Systems.</strong><details class="evidence-item"><summary>View award certificate</summary><object data="docs/第二届中国研究生操作系统开源创新大赛获奖证书.pdf" type="application/pdf"><p>PDF preview is unavailable. <a href="docs/第二届中国研究生操作系统开源创新大赛获奖证书.pdf" target="_blank" rel="noopener noreferrer">Open certificate</a></p></object></details></li><li><strong>First Prize, 376th Spark Cup and 2026 Challenge Cup College Students’ Entrepreneurship Plan Competition.</strong><details class="evidence-item"><summary>View Spark Cup award certificate</summary><object data="docs/星火杯一等奖证书.pdf" type="application/pdf"><p>PDF preview is unavailable. <a href="docs/星火杯一等奖证书.pdf" target="_blank" rel="noopener noreferrer">Open certificate</a></p></object></details></li><li><strong>Software Designer</strong>, Intermediate Professional Qualification.</li></ul>`, true);
+  t('#projects', `<h2 id="projects-title">Projects &amp; Experience <span lang="en">Projects &amp; Experience</span></h2><article><h3>RISC-V Emulator <span class="inline-link">[<a href="https://github.com/Jason-Yeah/riscvemu-study" target="_blank" rel="noopener noreferrer">Code</a>]</span></h3><p>A personal learning project exploring RISC-V emulation. Through reading and writing code, I turn my understanding of computer architecture, instruction execution, and system behavior into working implementations.</p><p><strong>Topics:</strong> RISC-V ISA, emulator implementation, and computer systems.</p><p class="repository">Repository: <a href="https://github.com/Jason-Yeah/riscvemu-study" target="_blank" rel="noopener noreferrer">github.com/Jason-Yeah/riscvemu-study</a></p></article><article><h3>C Kernel Learning</h3><p>An open-source learning project with notes and code covering C/C++ fundamentals, operating systems, and the Linux kernel. I organize low-level concepts and deepen my understanding through experiments.</p><p class="repository">Repository: <a href="https://github.com/Jason-Yeah/c-kernel-learning" target="_blank" rel="noopener noreferrer">github.com/Jason-Yeah/c-kernel-learning</a></p></article><article><h3>Defense and Innovation Projects</h3><p>I have contributed to defense research, national R&amp;D, and Huawei collaboration projects, supporting technical discussions, integration testing, and project documentation.</p><p>1. Defense research: UAV technology (details redacted)</p><p>2. Defense research: UAV security (details redacted)</p><p>3. Defense innovation: endogenous security (details redacted)</p><p>4. National R&amp;D: Key Technologies for Highly Reliable Real-time Industrial Wireless Network Security</p><p>5. Huawei collaboration: Security risk prediction and reasoning (Phase III)</p></article><p class="entry-note">More projects and learning notes will be added here.</p>`, true);
+  t('#skills', `<h2 id="skills-title">Skills &amp; Learning <span lang="en">Skills &amp; Learning</span></h2><ul><li><strong>Programming:</strong> C/C++ and Python; familiar with AI agent concepts and continuing to build practical development experience.</li><li><strong>Research:</strong> Intrusion detection and cybersecurity, including cryptomining traffic detection and dynamic defense for wireless networks.</li><li><strong>Systems:</strong> Studying computer systems through a RISC-V emulator project.</li></ul>`, true);
+  t('#contact', `<h2 id="contact-title">Contact <span lang="en">Contact</span></h2><p>Feel free to get in touch about intrusion detection, cybersecurity, C/C++, AI agent development, and related learning projects.</p><p>Email: <a href="mailto:jasonye247@gmail.com">jasonye247@gmail.com</a> <button id="copy-email" type="button">[Copy email]</button> <span id="copy-status" role="status" aria-live="polite"></span><br>GitHub: <a href="https://github.com/Jason-Yeah" target="_blank" rel="noopener noreferrer">github.com/Jason-Yeah</a></p>`, true);
+  t('footer', '© ' + new Date().getFullYear() + ' Jason Ye <a href="#home">Back to top ↑</a>', true);
+  document.getElementById('language-toggle').textContent = '中文';
+  document.getElementById('language-toggle').setAttribute('aria-label', '切换为中文');
+  document.querySelector('.terminal').setAttribute('aria-label', 'Interactive project terminal');
+  document.getElementById('terminal-input').setAttribute('aria-label', 'Enter terminal command');
+  document.querySelector('.vim-viewer').setAttribute('aria-label', 'Read-only file viewer');
+  document.getElementById('vim-ex-command').setAttribute('aria-label', 'Vim command');
+  document.querySelector('.vim-status span:last-child').textContent = 'hjkl/arrows move · v/V select · y yank · Ctrl+f/b page · Ctrl+d/u half-page · :q quit';
+} else {
+  document.getElementById('language-toggle')?.setAttribute('aria-label', '切换为英文');
+}
+
 const year = document.getElementById('year');
 if (year) year.textContent = new Date().getFullYear();
 const copyButton = document.getElementById('copy-email');
@@ -38,10 +78,28 @@ if (form) {
   let tabState = null;
   const owner = 'Jason-Yeah';
   const api = 'https://api.github.com';
+  const terminalTranslations = new Map([
+    ['欢迎来到 Jason 的项目空间。输入 help 查看命令，或输入 ls 浏览公开项目。', 'Welcome to Jason’s project space. Type help to see commands or ls to browse public repositories.'],
+    ['没有找到公开仓库。', 'No public repositories found.'], ['进入项目：cd 项目名', 'Enter a project with: cd <project>'], ['此目录为空。', 'This directory is empty.'],
+    ['已经在根目录，无法再向上。', 'Already at the root directory.'], ['可用命令：', 'Available commands:'],
+    ['  ls [-a] [-l] [路径] 显示当前目录或指定路径（-a 含隐藏文件，-l 详细信息）', '  ls [-a] [-l] [path]  List the current or specified directory (-a includes hidden files; -l shows details)'],
+    ['  cd <项目/目录>      进入仓库或子目录', '  cd <project/directory>  Enter a repository or subdirectory'], ['  cd . / ./           留在当前目录', '  cd . / ./               Stay in the current directory'],
+    ['  cd .. / ../         返回上一级', '  cd .. / ../             Go up one level'], ['  cd ../项目/目录     使用相对路径跳转', '  cd ../project/path      Navigate with a relative path'],
+    ['  cd ~/项目 或 /项目  从根目录跳转', '  cd ~/project or /project  Navigate from the root'], ['  cat <文件路径>     查看公开仓库中的文件', '  cat <file path>         Read a file in the public repository'],
+    ['  vim <文件路径>     只读 Vim 风格查看器（:q 退出）', '  vim <file path>         Read-only Vim-style viewer (:q to quit)'], ['  pwd                 显示当前虚拟路径', '  pwd                     Print the current virtual path'],
+    ['  person              查看个人简介', '  person                  Show my bio'], ['  clear               清空终端', '  clear                   Clear the terminal'],
+    ['Tab 补全命令、公开目录和文件；↑/↓ 浏览命令历史。', 'Tab completes commands, public directories, and files; ↑/↓ browse command history.'],
+    ['vim 中：hjkl/方向键移动，v/V 选择，y/yy 复制，Ctrl+f/b 全页翻动，Ctrl+d/u 半页翻动，:q 退出。', 'In vim: hjkl/arrows move, v/V select, y/yy yank, Ctrl+f/b page, Ctrl+d/u half-page, :q quit.'],
+    ['只读模式不会修改文件；复制需要浏览器剪贴板权限。', 'Read-only mode never changes files; yanking requires clipboard permission.'],
+    ['叶子森（Jason Ye）｜西安电子科技大学计算机科学与技术硕士。', 'Jason Ye | M.S. in Computer Science and Technology, Xidian University.'],
+    ['研究方向：入侵检测与网络安全；熟悉 C/C++、Python。', 'Research: intrusion detection and cybersecurity; skills include C/C++ and Python.'],
+    ['输入 ls 浏览 GitHub 公开项目，输入 help 查看命令。', 'Type ls to browse public GitHub repositories or help to see commands.'],
+    ['目标不是文件；cat 和 vim 只读取公开仓库中的文件。', 'Target is not a file; cat and vim only read files in public repositories.']
+  ]);
   const addLine = (text, className = '') => {
     const line = document.createElement('div');
     line.className = `terminal-line ${className}`;
-    line.textContent = text;
+    line.textContent = isEnglish ? (terminalTranslations.get(text) || text.replace('未找到命令：', 'Command not found: ').replace('。输入 help 查看可用命令。', '. Type help to see available commands.').replace('找不到目录：', 'Directory not found: ').replace('只能进入 ls 显示的公开仓库。', 'Only public repositories listed by ls can be entered.').replace('只能进入 ls 显示的公开目录。', 'Only public directories listed by ls can be entered.')) : text;
     lines.insertBefore(line, form);
     lines.scrollTop = lines.scrollHeight;
   };
