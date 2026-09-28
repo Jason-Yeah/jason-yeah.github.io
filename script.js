@@ -106,7 +106,7 @@ if (form) {
     addLine('  person              查看个人简介');
     addLine('  clear               清空终端');
     addLine('Tab 补全命令、公开目录和文件；↑/↓ 浏览命令历史。');
-    addLine('vim 中：hjkl/方向键移动，v/V 选择，y 复制，yy 复制当前行，:q 退出。');
+    addLine('vim 中：hjkl/方向键移动，v/V 选择，y/yy 复制，Ctrl+f/b 全页翻动，Ctrl+d/u 半页翻动，:q 退出。');
     addLine('只读模式不会修改文件；复制需要浏览器剪贴板权限。');
   }
   async function run(raw) {
@@ -354,10 +354,12 @@ if (form) {
     }
     else if (event.key === 'PageDown' || event.key === ' ' || (event.ctrlKey && event.key.toLowerCase() === 'f')) { vimContent.scrollTop += vimContent.clientHeight * .85; handled = true; }
     else if (event.key === 'PageUp' || (event.ctrlKey && event.key.toLowerCase() === 'b')) { vimContent.scrollTop -= vimContent.clientHeight * .85; handled = true; }
+    else if (event.ctrlKey && event.key.toLowerCase() === 'd') { vimContent.scrollTop += vimContent.clientHeight * .5; handled = true; }
+    else if (event.ctrlKey && event.key.toLowerCase() === 'u') { vimContent.scrollTop -= vimContent.clientHeight * .5; handled = true; }
     else handled = false;
     if (handled) {
       event.preventDefault();
-      if (!['PageDown', 'PageUp', ' '].includes(event.key) && !(event.ctrlKey && ['f', 'b'].includes(event.key.toLowerCase()))) {
+      if (!['PageDown', 'PageUp', ' '].includes(event.key) && !(event.ctrlKey && ['f', 'b', 'd', 'u'].includes(event.key.toLowerCase()))) {
         cursorColumn ??= next - lineStart(next);
         setVimCursor(next);
       }
