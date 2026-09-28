@@ -29,7 +29,7 @@ if (form) {
   const output = document.getElementById('terminal-output');
   const lines = document.getElementById('terminal-lines');
   const input = document.getElementById('terminal-input');
-  const prompt = document.getElementById('terminal-prompt');
+  const promptPath = document.getElementById('terminal-pwd');
   const cache = new Map();
   let cwd = [];
   let busy = false;
@@ -42,11 +42,21 @@ if (form) {
     const line = document.createElement('div');
     line.className = `terminal-line ${className}`;
     line.textContent = text;
-    lines.append(line);
+    lines.insertBefore(line, form);
     lines.scrollTop = lines.scrollHeight;
   };
-  const setPrompt = () => { prompt.textContent = `visitor@jason:~${cwd.length ? '/' + cwd.join('/') : ''}$`; };
-  const clearScreen = () => { lines.replaceChildren(); input.focus(); lines.scrollTop = 0; };
+  const promptLocation = () => `~${cwd.length ? '/' + cwd.join('/') : ''}`;
+  const setPrompt = () => { promptPath.textContent = promptLocation(); };
+  const addCommandLine = command => {
+    const line = document.createElement('div'); line.className = 'terminal-command-history';
+    const head = document.createElement('div'); head.className = 'prompt-head';
+    [['prompt-branch', '┌──('], ['prompt-user', 'jason@Jason'], ['prompt-branch', ')-['], ['prompt-path', promptLocation()], ['prompt-branch', ']']].forEach(([className, text]) => { const span = document.createElement('span'); span.className = className; span.textContent = text; head.append(span); });
+    const row = document.createElement('div'); row.className = 'prompt-command-history';
+    const symbol = document.createElement('span'); symbol.className = 'prompt-symbol'; symbol.textContent = '└─$';
+    const text = document.createElement('span'); text.textContent = command;
+    row.append(symbol, text); line.append(head, row); lines.insertBefore(line, form); lines.scrollTop = lines.scrollHeight;
+  };
+  const clearScreen = () => { lines.replaceChildren(form); input.focus(); lines.scrollTop = lines.scrollHeight; };
   async function getJson(url) {
     if (cache.has(url)) return cache.get(url);
     const response = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } });
@@ -63,39 +73,46 @@ if (form) {
     }
     return repos;
   }
-  async function showLs() {
-    if (!cwd.length) {
+  async function showLs(directory = cwd, showHidden = false, longFormat = false) {
+    if (!directory.length) {
       const repos = await listRepos();
       if (!repos.length) { addLine('没有找到公开仓库。'); return; }
       repos.forEach(repo => addLine(`${repo.name}/` + (repo.description ? `  — ${repo.description}` : ''), 'directory'));
       addLine('进入项目：cd 项目名');
       return;
     }
-    const [repo, ...folders] = cwd;
+    const [repo, ...folders] = directory;
     const entries = await getJson(pathUrl(repo, folders.join('/')));
     const items = Array.isArray(entries) ? entries : [entries];
-    const visible = items.filter(item => item.type === 'dir' || (item.type === 'file' && item.name.toLowerCase() === 'readme.md'));
-    if (!visible.length) { addLine('此目录下没有可展示的子目录或 README.md。'); return; }
-    visible.forEach(item => addLine(item.type === 'dir' ? `${item.name}/` : item.name, item.type === 'dir' ? 'directory' : 'file'));
+    const visible = items.filter(item => ['dir', 'file'].includes(item.type) && (showHidden || !item.name.startsWith('.')));
+    if (!visible.length) { addLine('此目录为空。'); return; }
+    visible.forEach(item => {
+      const name = item.type === 'dir' ? `${item.name}/` : item.name;
+      const detail = longFormat ? `${item.type === 'dir' ? '目录' : '文件'}\t${item.size ?? 0} B\t` : '';
+      addLine(detail + name, item.type === 'dir' ? 'directory' : 'file');
+    });
   }
   function showHelp() {
     addLine('可用命令：');
-    addLine('  ls                  查看公开仓库或当前目录');
+    addLine('  ls [-a] [-l] [路径] 显示当前目录或指定路径（-a 含隐藏文件，-l 详细信息）');
     addLine('  cd <项目/目录>      进入仓库或子目录');
     addLine('  cd . / ./           留在当前目录');
     addLine('  cd .. / ../         返回上一级');
     addLine('  cd ../项目/目录     使用相对路径跳转');
     addLine('  cd ~/项目 或 /项目  从根目录跳转');
     addLine('  cat <文件路径>     查看公开仓库中的文件');
-    addLine('  vim <文件路径>     只读 Vim 风格查看器（q 退出）');
+    addLine('  vim <文件路径>     只读 Vim 风格查看器（:q 退出）');
+    addLine('  pwd                 显示当前虚拟路径');
     addLine('  person              查看个人简介');
     addLine('  clear               清空终端');
-    addLine('所有仓库内容均从 GitHub 公开 API 读取。');
+    addLine('Tab 补全命令、公开目录和文件；↑/↓ 浏览命令历史。');
+    addLine('vim 中：hjkl/方向键移动，v/V 选择，y 复制，yy 复制当前行，:q 退出。');
+    addLine('只读模式不会修改文件；复制需要浏览器剪贴板权限。');
   }
   async function run(raw) {
     const command = raw.trim();
     if (!command) return;
-    addLine(`${prompt.textContent} ${command}`, 'command');
+    addCommandLine(command);
     const [verb, ...args] = command.split(/\s+/);
     try {
       if (verb === 'help') showHelp();
@@ -105,7 +122,14 @@ if (form) {
         addLine('输入 ls 浏览 GitHub 公开项目，输入 help 查看命令。');
       } else if (verb === 'clear') clearScreen();
       else if (verb === 'pwd') addLine('/' + cwd.join('/'));
-      else if (verb === 'ls') await showLs();
+      else if (verb === 'ls') {
+        const flags = new Set(args.filter(arg => arg.startsWith('-')).flatMap(arg => [...arg.slice(1)]));
+        if ([...flags].some(flag => !['a', 'l'].includes(flag))) throw new Error('ls 支持 -a、-l 和 -la/-al。');
+        const target = args.filter(arg => !arg.startsWith('-')).join(' ');
+        const directory = target ? await resolveDirectory(target) : cwd;
+        if (!directory) throw new Error(`找不到目录：${target}`);
+        await showLs(directory, flags.has('a'), flags.has('l'));
+      }
       else if (verb === 'cd') {
         const target = args.join(' ');
         if (!target || target === '~' || target === '/') cwd = [];
@@ -136,7 +160,7 @@ if (form) {
             return;
           }
         }
-        setPrompt(); await showLs();
+        setPrompt();
       } else if (verb === 'cat' || verb === 'vim') {
         if (!cwd.length) throw new Error(`请先 cd 进入一个公开项目，再使用 ${verb} <文件路径>。`);
         const requestedPath = args.join(' ');
@@ -169,30 +193,176 @@ if (form) {
   form.addEventListener('submit', async event => {
     event.preventDefault(); if (busy) return;
     const command = input.value; input.value = ''; if (command.trim()) history.push(command); historyIndex = history.length; tabState = null; busy = true; input.disabled = true;
-    try { await run(command); } finally { busy = false; input.disabled = false; input.focus(); }
+    try { await run(command); } finally { busy = false; input.disabled = false; if (vimViewer.hidden) input.focus(); }
   });
   document.getElementById('terminal-clear').addEventListener('click', clearScreen);
   const vimViewer = document.getElementById('vim-viewer');
   const vimContent = document.getElementById('vim-content');
   let vimLineHeight = 22;
+  let visualMode = null;
+  let visualAnchor = 0;
+  let cursorColumn = null;
+  let pendingYank = false;
+  const vimExCommand = document.getElementById('vim-ex-command');
+  function vimTextNode() { return vimContent.firstChild; }
+  let vimCursorIndex = 0;
+  function cursorPosition() {
+    if (visualMode) return vimCursorIndex;
+    const selection = window.getSelection(); const node = vimTextNode();
+    if (selection && selection.focusNode === node) return selection.focusOffset;
+    return 0;
+  }
+  function placeCursor(position) {
+    const node = vimTextNode(); if (!node) return;
+    const offset = Math.max(0, Math.min(position, node.length));
+    vimCursorIndex = offset;
+    const range = document.createRange(); range.setStart(node, offset); range.collapse(true);
+    const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+  }
+  function updateVisualSelection(position) {
+    const node = vimTextNode(); if (!node) return;
+    let start = Math.min(visualAnchor, position), end = Math.max(visualAnchor, position);
+    if (visualMode === 'line') {
+      const text = node.textContent;
+      start = text.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+      const lineEnd = text.indexOf('\n', end);
+      end = lineEnd < 0 ? text.length : lineEnd + 1;
+    } else if (end < node.length) end += 1;
+    const range = document.createRange(); range.setStart(node, start); range.setEnd(node, Math.max(start, end));
+    const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+  }
+  function setVimCursor(position) {
+    const node = vimTextNode(); if (!node) return;
+    const offset = Math.max(0, Math.min(position, node.length));
+    vimCursorIndex = offset;
+    if (visualMode) updateVisualSelection(offset); else placeCursor(offset);
+    const selection = window.getSelection();
+    if (selection?.focusNode === node) {
+      const range = document.createRange(); range.setStart(node, Math.min(offset, node.length)); range.collapse(true);
+      const rect = range.getBoundingClientRect(); const box = vimContent.getBoundingClientRect();
+      if (rect.top < box.top) vimContent.scrollTop -= box.top - rect.top;
+      else if (rect.bottom > box.bottom) vimContent.scrollTop += rect.bottom - box.bottom;
+    }
+  }
+  async function yankSelection(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      document.getElementById('vim-mode').textContent = `YANKED ${text.length} CHARACTERS`;
+      return true;
+    } catch {
+      document.getElementById('vim-mode').textContent = 'Clipboard unavailable — selection kept; press Ctrl+C';
+      return false;
+    }
+  }
   function openVim(filename, content) {
     document.getElementById('vim-filename').textContent = filename;
     vimContent.textContent = content;
     vimViewer.hidden = false;
     vimLineHeight = parseFloat(getComputedStyle(vimContent).lineHeight) || 22;
-    vimContent.scrollTop = 0; vimContent.focus();
+    vimExCommand.hidden = true; vimExCommand.value = '';
+    visualMode = null; visualAnchor = 0; cursorColumn = null; pendingYank = false; vimCursorIndex = 0;
+    document.getElementById('vim-mode').textContent = '-- NORMAL --';
+    vimContent.scrollTop = 0; vimContent.scrollLeft = 0; vimContent.focus();
+    requestAnimationFrame(() => setVimCursor(0));
   }
-  function closeVim() { vimViewer.hidden = true; input.focus(); }
-  vimContent.addEventListener('keydown', event => {
-    if (event.key === 'q' || event.key === 'Escape') { event.preventDefault(); closeVim(); }
-    else if (event.key === 'j' || event.key === 'ArrowDown') { event.preventDefault(); vimContent.scrollTop += vimLineHeight; }
-    else if (event.key === 'k' || event.key === 'ArrowUp') { event.preventDefault(); vimContent.scrollTop -= vimLineHeight; }
-    else if (event.ctrlKey && event.key.toLowerCase() === 'f') { event.preventDefault(); vimContent.scrollTop += vimContent.clientHeight * .85; }
-    else if (event.ctrlKey && event.key.toLowerCase() === 'b') { event.preventDefault(); vimContent.scrollTop -= vimContent.clientHeight * .85; }
-    else if (event.key === 'g') { event.preventDefault(); vimContent.scrollTop = 0; }
-    else if (event.key === 'G') { event.preventDefault(); vimContent.scrollTop = vimContent.scrollHeight; }
-    else event.preventDefault();
+  function closeVim() { vimViewer.hidden = true; vimExCommand.hidden = true; vimExCommand.value = ''; input.focus(); }
+  vimExCommand.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const command = vimExCommand.value.trim().replace(/^:/, '');
+      if (command === 'q' || command === 'q!') closeVim();
+      else {
+        document.getElementById('vim-mode').textContent = command.startsWith('w') ? 'E45: readonly file — changes are not saved' : `Unknown command: ${command}`;
+        vimExCommand.hidden = true; vimContent.focus();
+      }
+    } else if (event.key === 'Escape') {
+      event.preventDefault(); vimExCommand.hidden = true; vimExCommand.value = ''; vimContent.focus();
+      document.getElementById('vim-mode').textContent = '-- VIEW ONLY --';
+    }
   });
+  vimContent.addEventListener('beforeinput', event => event.preventDefault());
+  vimContent.addEventListener('paste', event => event.preventDefault());
+  vimContent.addEventListener('cut', event => event.preventDefault());
+  vimContent.addEventListener('drop', event => event.preventDefault());
+  document.addEventListener('keydown', async event => {
+    if (vimViewer.hidden) return;
+    if (event.target === vimExCommand) return;
+    if ((!visualMode && event.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) ||
+        ((event.ctrlKey || event.metaKey) && ['a', 'c'].includes(event.key.toLowerCase()))) return;
+    const mode = document.getElementById('vim-mode');
+    const node = vimTextNode(); if (!node) return;
+    const text = node.textContent;
+    const length = node.length;
+    const current = Math.min(cursorPosition(), Math.max(0, length - 1));
+    const lineStart = index => text.lastIndexOf('\n', Math.max(0, index - 1)) + 1;
+    const lineEnd = index => { const at = text.indexOf('\n', index); return at < 0 ? Math.max(0, length - 1) : Math.max(index, at - 1); };
+    let next = current;
+    let handled = true;
+    if (event.key === ':') {
+      event.preventDefault(); vimExCommand.hidden = false; vimExCommand.value = ':'; mode.textContent = 'COMMAND'; vimExCommand.focus(); vimExCommand.setSelectionRange(1, 1); return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (visualMode) { visualMode = null; placeCursor(current); }
+      pendingYank = false;
+      mode.textContent = '-- NORMAL --';
+      return;
+    }
+    if (event.key === 'q') { event.preventDefault(); return; }
+    if (event.key === 'v' || event.key === 'V') {
+      event.preventDefault();
+      if (visualMode) { visualMode = null; mode.textContent = '-- NORMAL --'; placeCursor(current); }
+      else { visualMode = event.key === 'V' ? 'line' : 'char'; visualAnchor = current; mode.textContent = visualMode === 'line' ? '-- VISUAL LINE --' : '-- VISUAL --'; updateVisualSelection(current); }
+      return;
+    }
+    if (event.key === 'y') {
+      event.preventDefault();
+      if (visualMode) {
+        const selection = window.getSelection(); const selected = selection?.toString() || '';
+        visualMode = null; pendingYank = false; const copied = await yankSelection(selected); if (copied) placeCursor(vimCursorIndex); mode.textContent = copied ? `-- NORMAL --  ${selected.length} chars yanked` : 'Selection kept — press Ctrl+C to copy';
+      } else if (pendingYank) {
+        const start = lineStart(current), end = lineEnd(current);
+        const selected = text.slice(start, end + (text[end + 1] === '\n' ? 1 : 0));
+        const range = document.createRange(); range.setStart(node, start); range.setEnd(node, Math.min(length, start + selected.length));
+        const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+        pendingYank = false; const copied = await yankSelection(selected); if (copied) placeCursor(vimCursorIndex);
+      } else { pendingYank = true; mode.textContent = 'y'; }
+      return;
+    }
+    if (pendingYank) { pendingYank = false; mode.textContent = visualMode ? '-- VISUAL --' : '-- NORMAL --'; }
+    const start = lineStart(current), end = lineEnd(current), column = cursorColumn ?? (current - start);
+    if (event.key === 'h' || event.key === 'ArrowLeft') next = Math.max(start, current - 1);
+    else if (event.key === 'l' || event.key === 'ArrowRight') next = Math.min(end, current + 1);
+    else if (event.key === 'j' || event.key === 'ArrowDown' || event.key === 'k' || event.key === 'ArrowUp') {
+      const down = event.key === 'j' || event.key === 'ArrowDown';
+      const targetStart = down ? (text.indexOf('\n', end) < 0 ? -1 : text.indexOf('\n', end) + 1) : start - 1;
+      if (targetStart >= 0) {
+        const targetEnd = lineEnd(targetStart); next = Math.min(targetStart + column, targetEnd); cursorColumn = column;
+      }
+    } else if (event.key === '0' || event.key === 'Home') { next = start; cursorColumn = 0; }
+    else if (event.key === '$' || event.key === 'End') { next = end; cursorColumn = null; }
+    else if (event.key === 'w') { const match = /\w+|\W+/.exec(text.slice(current + 1)); next = match ? current + 1 + match[0].length : length - 1; cursorColumn = null; }
+    else if (event.key === 'b') { const before = text.slice(0, current).match(/\w+|\W+$/); next = before ? Math.max(0, current - before[0].length) : 0; cursorColumn = null; }
+    else if (event.key === 'g') { next = 0; cursorColumn = null; }
+    else if (event.key === 'G') { next = Math.max(0, length - 1); cursorColumn = null; }
+    else if (event.key === 'H' || event.key === 'M' || event.key === 'L') {
+      const rows = text.split('\n');
+      const currentRow = text.slice(0, current).split('\n').length - 1;
+      const visibleRows = Math.max(1, Math.floor(vimContent.clientHeight / vimLineHeight));
+      const targetRow = event.key === 'H' ? Math.max(0, currentRow - Math.floor(visibleRows / 2)) : event.key === 'M' ? Math.min(rows.length - 1, currentRow + Math.floor(visibleRows / 2)) : Math.min(rows.length - 1, currentRow + visibleRows - 1);
+      next = rows.slice(0, targetRow).reduce((sum, row) => sum + row.length + 1, 0); cursorColumn = null;
+    }
+    else if (event.key === 'PageDown' || event.key === ' ' || (event.ctrlKey && event.key.toLowerCase() === 'f')) { vimContent.scrollTop += vimContent.clientHeight * .85; handled = true; }
+    else if (event.key === 'PageUp' || (event.ctrlKey && event.key.toLowerCase() === 'b')) { vimContent.scrollTop -= vimContent.clientHeight * .85; handled = true; }
+    else handled = false;
+    if (handled) {
+      event.preventDefault();
+      if (!['PageDown', 'PageUp', ' '].includes(event.key) && !(event.ctrlKey && ['f', 'b'].includes(event.key.toLowerCase()))) {
+        cursorColumn ??= next - lineStart(next);
+        setVimCursor(next);
+      }
+    } else if (event.key.length === 1 || event.key.startsWith('Arrow')) event.preventDefault();
+  }, true);
   async function resolveDirectory(path) {
     const absolute = path.startsWith('/') || path === '~' || path.startsWith('~/');
     const normalized = path.replace(/^~(?=\/|$)/, '');
@@ -231,7 +401,7 @@ if (form) {
     if (event.key === 'Tab') {
       event.preventDefault();
       try {
-        const value = input.value; const match = value.match(/^(\s*)(?:(cd|cat|vim)\s+)?(.*)$/);
+        const value = input.value; const match = value.match(/^(\s*)(?:(cd|cat|vim|ls)\s+)?(.*)$/);
         if (!match) return;
         const commandPrefix = match[1] + (match[2] ? match[2] + ' ' : '');
         const token = match[3];
@@ -239,12 +409,13 @@ if (form) {
         let tokenPrefix = '';
         let candidates;
         if (!match[2]) candidates = commands;
-        else if (match[2] === 'cat' || match[2] === 'vim' || match[2] === 'cd') {
+        else if (match[2] === 'ls' && token.startsWith('-') && !token.includes('/')) candidates = ['-a', '-l', '-al', '-la'];
+        else if (match[2] === 'cat' || match[2] === 'vim' || match[2] === 'cd' || match[2] === 'ls') {
           const slash = token.lastIndexOf('/');
           tokenPrefix = slash >= 0 ? token.slice(0, slash + 1) : '';
           const parentPath = slash >= 0 ? (slash === 0 ? '/' : token.slice(0, slash)) : '';
           const directory = parentPath ? await resolveDirectory(parentPath) : cwd;
-          const includeFiles = match[2] !== 'cd';
+          const includeFiles = match[2] === 'cat' || match[2] === 'vim' || match[2] === 'ls';
           candidates = directory ? await completionCandidates(directory, includeFiles) : [];
         }
         const leaf = token.slice(tokenPrefix.length);
@@ -262,10 +433,11 @@ if (form) {
       return;
     }
     if (event.ctrlKey && event.key.toLowerCase() === 'l') { event.preventDefault(); clearScreen(); }
-    if (event.ctrlKey && event.key.toLowerCase() === 'c') { event.preventDefault(); addLine(`${prompt.textContent} ${input.value}^C`, 'command'); input.value = ''; }
+    if (event.ctrlKey && event.key.toLowerCase() === 'c') { event.preventDefault(); addCommandLine(`${input.value}^C`); input.value = ''; }
     tabState = null;
   });
-  document.querySelector('.terminal').addEventListener('click', event => { if (!event.target.closest('button')) input.focus(); });
+  document.querySelector('.terminal').addEventListener('click', event => { if (!event.target.closest('button, .vim-viewer')) input.focus(); });
   addLine('欢迎来到 Jason 的项目空间。输入 help 查看命令，或输入 ls 浏览公开项目。');
   addLine('');
+  lines.append(form);
 }
