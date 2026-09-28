@@ -3,3 +3,5 @@
 @media(max-width:370px){.page{padding-left:14px;padding-right:14px}.section-heading{display:block}.terminal-hint{display:block;text-align:left;margin-top:8px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 @media print{body{background:#fff}.page{max-width:none;padding:0}.hero nav,.terminal-section,.skip-link,#copy-email,#copy-status,footer a{display:none}.hero{padding:0 0 20px}main section[id]{box-shadow:none;border:0;border-radius:0;padding:12px 0;margin:0 0 10px}h2{font-size:16pt;break-after:avoid}h3{break-after:avoid}a{text-decoration:none}article,li{break-inside:avoid}}
+/* Keep the live prompt in the same scrollable buffer as terminal output. */
+.terminal-output{display:flex;flex-direction:column;gap:0;scrollbar-gutter:stable}.terminal-lines{flex:0 0 auto}.terminal-input-line{flex:0 0 auto;margin-top:auto;border-top:0;padding-top:7px;padding-bottom:8px}.terminal-output:has(.terminal-lines .terminal-line){scroll-behavior:auto}

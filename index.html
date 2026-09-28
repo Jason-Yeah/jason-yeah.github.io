@@ -39,8 +39,10 @@
         <div class="section-heading"><div><p class="eyebrow">EXPLORE MY WORK</p><h2 id="terminal-title">项目终端</h2></div><span class="terminal-hint">输入 <code>help</code> 查看命令</span></div>
         <div class="terminal" aria-label="个人项目交互终端">
           <div class="terminal-bar"><div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div><span>jason — projects</span><button type="button" id="terminal-clear" aria-label="清空终端输出">清空</button></div>
-          <div id="terminal-output" class="terminal-output" role="log" aria-live="polite" aria-relevant="additions text"></div>
-          <form id="terminal-form" class="terminal-input-line" autocomplete="off"><label for="terminal-input" id="terminal-prompt">visitor@jason:~$</label><input id="terminal-input" name="command" type="text" spellcheck="false" aria-label="输入终端命令"><button type="submit" aria-label="执行命令">↵</button></form>
+          <div id="terminal-output" class="terminal-output" role="log" aria-live="polite" aria-relevant="additions text">
+            <div id="terminal-lines" class="terminal-lines"></div>
+            <form id="terminal-form" class="terminal-input-line" autocomplete="off"><label for="terminal-input" id="terminal-prompt">visitor@jason:~$</label><input id="terminal-input" name="command" type="text" spellcheck="false" autofocus aria-label="输入终端命令"><button type="submit" aria-label="执行命令">↵</button></form>
+          </div>
         </div>
         <p class="terminal-caption">这是一个只读的作品浏览器。仓库内容来自 GitHub 公开 API。</p>
       </section>
@@ -63,7 +65,7 @@
         <h2 id="research-title">论文与专利 <span lang="en">Publications &amp; Patents</span></h2>
         <h3>会议论文</h3>
         <ol class="entries">
-          <li><strong lang="en">MineTS: Robust Cryptomining Traffic Detection Based on Temporal-Statistical Learning.</strong><br><em lang="en">NaNA 2026</em> · EI 会议论文 · 已发表。
+          <li><strong lang="en"><a href="https://ieeexplore.ieee.org/document/11710201" target="_blank" rel="noopener noreferrer">MineTS: Robust Cryptomining Traffic Detection Based on Temporal-Statistical Learning.</a></strong><br><em lang="en">NaNA 2026</em> · EI 会议论文 · <a href="https://ieeexplore.ieee.org/document/11710201" target="_blank" rel="noopener noreferrer">IEEE Xplore 论文主页 ↗</a>。
             <p class="entry-note">研究主题：基于时序与统计学习的加密挖矿流量检测，关注该类流量的识别与检测鲁棒性。</p>
           </li>
         </ol>
