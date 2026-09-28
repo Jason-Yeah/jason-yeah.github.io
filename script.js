@@ -43,10 +43,10 @@ if (form) {
     line.className = `terminal-line ${className}`;
     line.textContent = text;
     lines.append(line);
-    output.scrollTop = output.scrollHeight;
+    lines.scrollTop = lines.scrollHeight;
   };
   const setPrompt = () => { prompt.textContent = `visitor@jason:~${cwd.length ? '/' + cwd.join('/') : ''}$`; };
-  const clearScreen = () => { lines.replaceChildren(); input.focus(); output.scrollTop = output.scrollHeight; };
+  const clearScreen = () => { lines.replaceChildren(); input.focus(); lines.scrollTop = 0; };
   async function getJson(url) {
     if (cache.has(url)) return cache.get(url);
     const response = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } });
@@ -86,7 +86,8 @@ if (form) {
     addLine('  cd .. / ../         返回上一级');
     addLine('  cd ../项目/目录     使用相对路径跳转');
     addLine('  cd ~/项目 或 /项目  从根目录跳转');
-    addLine('  cat README.md       阅读当前目录的项目说明');
+    addLine('  cat <文件路径>     查看公开仓库中的文件');
+    addLine('  vim <文件路径>     只读 Vim 风格查看器（q 退出）');
     addLine('  person              查看个人简介');
     addLine('  clear               清空终端');
     addLine('所有仓库内容均从 GitHub 公开 API 读取。');
@@ -136,19 +137,32 @@ if (form) {
           }
         }
         setPrompt(); await showLs();
-      } else if (verb === 'cat') {
-        if (args.length !== 1 || args[0].toLowerCase() !== 'readme.md') throw new Error('为保护浏览范围，cat 仅支持 README.md。');
-        if (!cwd.length) throw new Error('请先 cd 进入一个公开项目或目录。');
-        const [repo, ...folders] = cwd;
-        const parent = await getJson(pathUrl(repo, folders.join('/')));
-        const items = Array.isArray(parent) ? parent : [parent];
-        const readme = items.find(item => item.type === 'file' && item.name.toLowerCase() === 'readme.md');
-        if (!readme) throw new Error('这个目录没有 README.md。');
-        const file = await getJson(pathUrl(repo, [...folders, readme.name].join('/')));
-        if (!file.content) throw new Error('无法读取 README.md。');
-        const bytes = Uint8Array.from(atob(file.content.replace(/\s/g, '')), char => char.charCodeAt(0));
-        const text = new TextDecoder().decode(bytes);
-        addLine(''); text.split('\n').forEach(line => addLine(line));
+      } else if (verb === 'cat' || verb === 'vim') {
+        if (!cwd.length) throw new Error(`请先 cd 进入一个公开项目，再使用 ${verb} <文件路径>。`);
+        const requestedPath = args.join(' ');
+        if (!requestedPath) throw new Error(`用法：${verb} <文件路径>`);
+        const [repo, ...currentFolders] = cwd;
+        let folders = [...currentFolders];
+        let filePath = requestedPath.replace(/^\.\//, '');
+        if (filePath.startsWith('/')) { folders = []; filePath = filePath.replace(/^\/+/, ''); }
+        for (const part of filePath.split('/')) {
+          if (!part || part === '.') continue;
+          if (part === '..') { if (folders.length) folders.pop(); else throw new Error('路径不能离开当前公开仓库。'); }
+          else folders.push(part);
+        }
+        const file = await getJson(pathUrl(repo, folders.join('/')));
+        if (Array.isArray(file) || file.type !== 'file') throw new Error('目标不是文件；cat 和 vim 只读取公开仓库中的文件。');
+        let content;
+        if (typeof file.content === 'string' && file.content.trim()) {
+          const bytes = Uint8Array.from(atob(file.content.replace(/\s/g, '')), char => char.charCodeAt(0));
+          content = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+        } else if (file.download_url) {
+          const response = await fetch(file.download_url);
+          if (!response.ok) throw new Error(`文件读取失败（${response.status}）。`);
+          content = await response.text();
+        } else throw new Error('GitHub API 未返回文件内容。');
+        if (verb === 'cat') { addLine(''); content.split('\n').forEach(line => addLine(line)); }
+        else openVim(repo + '/' + folders.join('/'), content);
       } else addLine(`未找到命令：${verb}。输入 help 查看可用命令。`, 'error');
     } catch (error) { addLine(error.message || '读取失败，请稍后再试。', 'error'); }
   }
@@ -158,6 +172,27 @@ if (form) {
     try { await run(command); } finally { busy = false; input.disabled = false; input.focus(); }
   });
   document.getElementById('terminal-clear').addEventListener('click', clearScreen);
+  const vimViewer = document.getElementById('vim-viewer');
+  const vimContent = document.getElementById('vim-content');
+  let vimLineHeight = 22;
+  function openVim(filename, content) {
+    document.getElementById('vim-filename').textContent = filename;
+    vimContent.textContent = content;
+    vimViewer.hidden = false;
+    vimLineHeight = parseFloat(getComputedStyle(vimContent).lineHeight) || 22;
+    vimContent.scrollTop = 0; vimContent.focus();
+  }
+  function closeVim() { vimViewer.hidden = true; input.focus(); }
+  vimContent.addEventListener('keydown', event => {
+    if (event.key === 'q' || event.key === 'Escape') { event.preventDefault(); closeVim(); }
+    else if (event.key === 'j' || event.key === 'ArrowDown') { event.preventDefault(); vimContent.scrollTop += vimLineHeight; }
+    else if (event.key === 'k' || event.key === 'ArrowUp') { event.preventDefault(); vimContent.scrollTop -= vimLineHeight; }
+    else if (event.ctrlKey && event.key.toLowerCase() === 'f') { event.preventDefault(); vimContent.scrollTop += vimContent.clientHeight * .85; }
+    else if (event.ctrlKey && event.key.toLowerCase() === 'b') { event.preventDefault(); vimContent.scrollTop -= vimContent.clientHeight * .85; }
+    else if (event.key === 'g') { event.preventDefault(); vimContent.scrollTop = 0; }
+    else if (event.key === 'G') { event.preventDefault(); vimContent.scrollTop = vimContent.scrollHeight; }
+    else event.preventDefault();
+  });
   async function resolveDirectory(path) {
     const absolute = path.startsWith('/') || path === '~' || path.startsWith('~/');
     const normalized = path.replace(/^~(?=\/|$)/, '');
@@ -180,11 +215,11 @@ if (form) {
     }
     return next;
   }
-  async function completionCandidates(directory = cwd) {
+  async function completionCandidates(directory = cwd, includeFiles = false) {
     if (!directory.length) return (await listRepos()).map(repo => repo.name + '/');
     const [repo, ...folders] = directory;
     const entries = await getJson(pathUrl(repo, folders.join('/')));
-    return (Array.isArray(entries) ? entries : [entries]).filter(item => item.type === 'dir' || (item.type === 'file' && item.name.toLowerCase() === 'readme.md')).map(item => item.name + (item.type === 'dir' ? '/' : ''));
+    return (Array.isArray(entries) ? entries : [entries]).filter(item => item.type === 'dir' || (includeFiles && item.type === 'file')).map(item => item.name + (item.type === 'dir' ? '/' : ''));
   }
   input.addEventListener('keydown', async event => {
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
@@ -196,21 +231,21 @@ if (form) {
     if (event.key === 'Tab') {
       event.preventDefault();
       try {
-        const value = input.value; const match = value.match(/^(\s*)(?:(cd|cat)\s+)?(.*)$/);
+        const value = input.value; const match = value.match(/^(\s*)(?:(cd|cat|vim)\s+)?(.*)$/);
         if (!match) return;
         const commandPrefix = match[1] + (match[2] ? match[2] + ' ' : '');
         const token = match[3];
-        const commands = ['ls', 'cd', 'cat', 'person', 'help', 'pwd', 'clear'];
+        const commands = ['ls', 'cd', 'cat', 'vim', 'person', 'help', 'pwd', 'clear'];
         let tokenPrefix = '';
         let candidates;
         if (!match[2]) candidates = commands;
-        else if (match[2] === 'cat') candidates = ['README.md'];
-        else {
+        else if (match[2] === 'cat' || match[2] === 'vim' || match[2] === 'cd') {
           const slash = token.lastIndexOf('/');
           tokenPrefix = slash >= 0 ? token.slice(0, slash + 1) : '';
           const parentPath = slash >= 0 ? (slash === 0 ? '/' : token.slice(0, slash)) : '';
-          const directory = parentPath ? await resolveDirectory(parentPath || '/') : cwd;
-          candidates = directory ? await completionCandidates(directory) : [];
+          const directory = parentPath ? await resolveDirectory(parentPath) : cwd;
+          const includeFiles = match[2] !== 'cd';
+          candidates = directory ? await completionCandidates(directory, includeFiles) : [];
         }
         const leaf = token.slice(tokenPrefix.length);
         const choices = candidates.filter(name => name.toLowerCase().startsWith(leaf.toLowerCase()));
@@ -222,7 +257,7 @@ if (form) {
           const common = choices.reduce((prefix, name) => { let i = 0; while (i < prefix.length && i < name.length && prefix[i].toLowerCase() === name[i].toLowerCase()) i++; return prefix.slice(0, i); });
           if (common.length > leaf.length) input.value = makeValue(common);
         }
-        input.setSelectionRange(input.value.length, input.value.length); output.scrollTop = output.scrollHeight;
+        input.setSelectionRange(input.value.length, input.value.length); lines.scrollTop = lines.scrollHeight;
       } catch (error) { addLine(error.message || '补全失败。', 'error'); }
       return;
     }
