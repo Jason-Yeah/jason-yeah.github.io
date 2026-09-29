@@ -15,3 +15,19 @@
 .vim-viewer pre{caret-color:#2779d8}
 
 .hero-links #language-toggle{display:inline-flex;align-items:center;gap:6px;margin-left:auto;padding:0;border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:500;line-height:1.5}.hero-links #language-toggle:hover{color:var(--blue)}.hero-links #language-toggle svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}.hero-links #language-toggle span{font-size:12px}
+
+/* Slightly wider transcript and readable, selectable terminal typography. */
+.terminal{width:calc(100% + 28px)}
+.terminal-lines{font-size:15px;line-height:1.75;user-select:text;-webkit-user-select:text;cursor:text}
+.terminal-input-line,.terminal-command-history{font-size:15px}
+.terminal-lines ::selection{background:#c7dfff;color:#171717}
+.markdown-heading{font-weight:650;color:#a88be8}
+.markdown-marker{color:#a88be8;margin-right:.55em;font-weight:750}
+.terminal-input-line input::selection{background:#c7dfff;color:#171717}
+@media(max-width:700px){.terminal{width:100%}.terminal-lines{font-size:14px}.terminal-input-line,.terminal-command-history{font-size:14px}}
+
+/* Give the terminal transcript a little more vertical room. */
+.terminal-screen{height:clamp(420px,50vh,600px)}
+@media(max-width:700px){.terminal-screen{height:440px}}
+
+.terminal-input-line .prompt-symbol{color:#2779d8}
