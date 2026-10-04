@@ -327,6 +327,10 @@ if (form) {
   const vimViewer = document.getElementById('vim-viewer');
   const vimContent = document.getElementById('vim-content');
   const vimHighlight = document.getElementById('vim-highlight');
+  vimContent.addEventListener('scroll', () => {
+    vimHighlight.scrollTop = vimContent.scrollTop;
+    vimHighlight.scrollLeft = vimContent.scrollLeft;
+  });
   function highlightVimText(filename, content) {
     const ext = filename.split('.').pop().toLowerCase();
     const escapeHtml = value => value.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
