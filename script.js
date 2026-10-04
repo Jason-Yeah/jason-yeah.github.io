@@ -339,9 +339,18 @@ if (form) {
     if (kind === 'prose') {
       vimHighlight.innerHTML = content.split('\n').map(line => {
         const escaped = escapeHtml(line);
-        if (/^#{1,6}\s/.test(line)) return `<span class="syn-heading"><span class="syn-marker">${line.match(/^#{1,6}/)[0]}</span>${escapeHtml(line.replace(/^#{1,6}\s*/, ''))}</span>`;
-        if (/^\s*([-*+] |\d+\. )/.test(line)) return `<span class="syn-list"><span class="syn-marker">${escapeHtml(line.match(/^\s*(?:[-*+]|\d+\.)/)[0])}</span>${escapeHtml(line.replace(/^\s*(?:[-*+] |\d+\. )/, ''))}</span>`;
-        if (/^\s*>/.test(line)) return `<span class="syn-quote"><span class="syn-marker">&gt;</span>${escapeHtml(line.replace(/^\s*&gt;?\s?/, ''))}</span>`;
+        if (/^#{1,6}\s/.test(line)) {
+          const marker = line.match(/^#{1,6}\s+/)[0];
+          return `<span class="syn-heading"><span class="syn-marker">${escapeHtml(marker)}</span>${escapeHtml(line.slice(marker.length))}</span>`;
+        }
+        if (/^\s*([-*+] |\d+\. )/.test(line)) {
+          const marker = line.match(/^\s*(?:[-*+] |\d+\. )/)[0];
+          return `<span class="syn-list"><span class="syn-marker">${escapeHtml(marker)}</span>${escapeHtml(line.slice(marker.length))}</span>`;
+        }
+        if (/^\s*>/.test(line)) {
+          const marker = line.match(/^\s*>\s?/)[0];
+          return `<span class="syn-quote"><span class="syn-marker">${escapeHtml(marker)}</span>${escapeHtml(line.slice(marker.length))}</span>`;
+        }
         return escaped.replace(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g, '<span class="syn-emphasis">$1</span>');
       }).join('\n');
     } else if (kind === 'code' || kind === 'data') {
@@ -360,6 +369,8 @@ if (form) {
   let visualAnchor = 0;
   let cursorColumn = null;
   let pendingYank = false;
+  let searchQuery = '';
+  let lastSearchIndex = -1;
   const vimExCommand = document.getElementById('vim-ex-command');
   function vimTextNode() { return vimContent.firstChild; }
   let vimCursorIndex = 0;
@@ -397,9 +408,33 @@ if (form) {
     if (selection?.focusNode === node) {
       const range = document.createRange(); range.setStart(node, Math.min(offset, node.length)); range.collapse(true);
       const rect = range.getBoundingClientRect(); const box = vimContent.getBoundingClientRect();
-      if (rect.top < box.top) vimContent.scrollTop -= box.top - rect.top;
-      else if (rect.bottom > box.bottom) vimContent.scrollTop += rect.bottom - box.bottom;
+      const scrollMargin = vimLineHeight * 3;
+      if (rect.top < box.top + scrollMargin) vimContent.scrollTop -= box.top + scrollMargin - rect.top;
+      else if (rect.bottom > box.bottom - scrollMargin) vimContent.scrollTop += rect.bottom - (box.bottom - scrollMargin);
     }
+  }
+  function findVimMatch(direction, initial = false) {
+    if (!searchQuery) return false;
+    const text = vimTextNode()?.textContent || '';
+    if (!text) return false;
+    const anchor = lastSearchIndex >= 0 ? lastSearchIndex : cursorPosition();
+    let index = direction > 0
+      ? text.indexOf(searchQuery, anchor + (initial ? 1 : Math.max(1, searchQuery.length)))
+      : text.lastIndexOf(searchQuery, anchor - 1);
+    if (index < 0) index = direction > 0 ? text.indexOf(searchQuery) : text.lastIndexOf(searchQuery);
+    if (index < 0) {
+      document.getElementById('vim-mode').textContent = `Pattern not found: ${searchQuery}`;
+      return false;
+    }
+    const node = vimTextNode();
+    const range = document.createRange(); range.setStart(node, index); range.setEnd(node, index + searchQuery.length);
+    const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    lastSearchIndex = index; vimCursorIndex = index; cursorColumn = null;
+    document.getElementById('vim-mode').textContent = `/${searchQuery}`;
+    const box = vimContent.getBoundingClientRect(), rect = range.getBoundingClientRect(), margin = vimLineHeight * 3;
+    if (rect.top < box.top + margin) vimContent.scrollTop -= box.top + margin - rect.top;
+    else if (rect.bottom > box.bottom - margin) vimContent.scrollTop += rect.bottom - (box.bottom - margin);
+    return true;
   }
   async function yankSelection(text) {
     try {
@@ -418,7 +453,7 @@ if (form) {
     vimViewer.hidden = false;
     vimLineHeight = parseFloat(getComputedStyle(vimContent).lineHeight) || 22;
     vimExCommand.hidden = true; vimExCommand.value = '';
-    visualMode = null; visualAnchor = 0; cursorColumn = null; pendingYank = false; vimCursorIndex = 0;
+    visualMode = null; visualAnchor = 0; cursorColumn = null; pendingYank = false; vimCursorIndex = 0; searchQuery = ''; lastSearchIndex = -1;
     document.getElementById('vim-mode').textContent = '-- NORMAL --';
     vimContent.scrollTop = 0; vimContent.scrollLeft = 0; vimContent.focus();
     requestAnimationFrame(() => setVimCursor(0));
@@ -427,9 +462,22 @@ if (form) {
   vimExCommand.addEventListener('keydown', event => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      const command = vimExCommand.value.trim().replace(/^:/, '');
-      if (command === 'q' || command === 'q!') closeVim();
+      const rawCommand = vimExCommand.value.trim();
+      if (rawCommand.startsWith('/')) {
+        searchQuery = rawCommand.slice(1);
+        lastSearchIndex = -1;
+        if (searchQuery) findVimMatch(1, true);
+        else document.getElementById('vim-mode').textContent = '-- NORMAL --';
+        vimExCommand.hidden = true; vimExCommand.value = ''; vimContent.focus();
+      } else if (rawCommand.startsWith('?')) {
+        searchQuery = rawCommand.slice(1);
+        lastSearchIndex = -1;
+        if (searchQuery) findVimMatch(-1, true);
+        else document.getElementById('vim-mode').textContent = '-- NORMAL --';
+        vimExCommand.hidden = true; vimExCommand.value = ''; vimContent.focus();
+      } else if (rawCommand.replace(/^:/, '') === 'q' || rawCommand.replace(/^:/, '') === 'q!') closeVim();
       else {
+        const command = rawCommand.replace(/^:/, '');
         document.getElementById('vim-mode').textContent = command.startsWith('w') ? 'E45: readonly file — changes are not saved' : `Unknown command: ${command}`;
         vimExCommand.hidden = true; vimContent.focus();
       }
@@ -459,6 +507,12 @@ if (form) {
     if (event.key === ':') {
       event.preventDefault(); vimExCommand.hidden = false; vimExCommand.value = ':'; mode.textContent = 'COMMAND'; vimExCommand.focus(); vimExCommand.setSelectionRange(1, 1); return;
     }
+    if (event.key === '/') {
+      event.preventDefault(); vimExCommand.hidden = false; vimExCommand.value = '/'; mode.textContent = 'SEARCH'; vimExCommand.focus(); vimExCommand.setSelectionRange(1, 1); return;
+    }
+    if (event.key === '?') {
+      event.preventDefault(); vimExCommand.hidden = false; vimExCommand.value = '?'; mode.textContent = 'SEARCH BACKWARD'; vimExCommand.focus(); vimExCommand.setSelectionRange(1, 1); return;
+    }
     if (event.key === 'Escape') {
       event.preventDefault();
       if (visualMode) { visualMode = null; placeCursor(current); }
@@ -467,6 +521,9 @@ if (form) {
       return;
     }
     if (event.key === 'q') { event.preventDefault(); return; }
+    if ((event.key === 'n' || event.key === 'N') && searchQuery) {
+      event.preventDefault(); findVimMatch(event.key === 'N' ? -1 : 1); return;
+    }
     if (event.key === 'v' || event.key === 'V') {
       event.preventDefault();
       if (visualMode) { visualMode = null; mode.textContent = '-- NORMAL --'; placeCursor(current); }
@@ -510,10 +567,10 @@ if (form) {
       const targetRow = event.key === 'H' ? Math.max(0, currentRow - Math.floor(visibleRows / 2)) : event.key === 'M' ? Math.min(rows.length - 1, currentRow + Math.floor(visibleRows / 2)) : Math.min(rows.length - 1, currentRow + visibleRows - 1);
       next = rows.slice(0, targetRow).reduce((sum, row) => sum + row.length + 1, 0); cursorColumn = null;
     }
-    else if (event.key === 'PageDown' || event.key === ' ' || (event.ctrlKey && event.key.toLowerCase() === 'f')) { vimContent.scrollTop += vimContent.clientHeight * .85; handled = true; }
-    else if (event.key === 'PageUp' || (event.ctrlKey && event.key.toLowerCase() === 'b')) { vimContent.scrollTop -= vimContent.clientHeight * .85; handled = true; }
-    else if (event.ctrlKey && event.key.toLowerCase() === 'd') { vimContent.scrollTop += vimContent.clientHeight * .5; handled = true; }
-    else if (event.ctrlKey && event.key.toLowerCase() === 'u') { vimContent.scrollTop -= vimContent.clientHeight * .5; handled = true; }
+    else if (event.key === 'PageDown' || event.key === ' ' || (event.ctrlKey && event.key.toLowerCase() === 'f')) { vimContent.scrollTop += vimContent.clientHeight * .7; handled = true; }
+    else if (event.key === 'PageUp' || (event.ctrlKey && event.key.toLowerCase() === 'b')) { vimContent.scrollTop -= vimContent.clientHeight * .7; handled = true; }
+    else if (event.ctrlKey && event.key.toLowerCase() === 'd') { vimContent.scrollTop += vimContent.clientHeight * .35; handled = true; }
+    else if (event.ctrlKey && event.key.toLowerCase() === 'u') { vimContent.scrollTop -= vimContent.clientHeight * .35; handled = true; }
     else handled = false;
     if (handled) {
       event.preventDefault();

@@ -15,6 +15,7 @@
 .vim-viewer pre{caret-color:#2779d8}
 .vim-code{position:relative;flex:1;min-height:0;overflow:hidden;background:#fbfcff}.vim-code pre{position:absolute;inset:0;width:100%;height:100%;overflow:auto;margin:0;padding:16px 20px;white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,"SFMono-Regular",Menlo,Monaco,Consolas,"Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;line-height:1.75;tab-size:2}.vim-code #vim-highlight{overflow:hidden;pointer-events:none;color:#334155}.vim-code #vim-content{color:transparent;background:transparent;z-index:1;-webkit-text-fill-color:transparent}.vim-code #vim-content::selection{background:rgba(104,145,198,.34);color:transparent}.vim-highlight.vim-prose{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif;color:#334155}.syn-heading{color:#1d4ed8;font-weight:700}.syn-list{color:#334155}.syn-quote,.syn-comment{color:#8792a2}.syn-emphasis{color:#9a3412;font-weight:600}.syn-keyword{color:#7c3aed;font-weight:600}.syn-string{color:#15803d}.syn-number{color:#b45309}.syn-marker{color:#94a3b8}
 .terminal-line.file-content{font-family:ui-monospace,"SFMono-Regular",Menlo,Monaco,Consolas,"Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif;color:#334155}.terminal-line.prose-line{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif}.terminal-line.markdown-heading{color:#1d4ed8;font-weight:650}
+.vim-code:has(.vim-prose) #vim-content{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif}.vim-highlight .syn-heading,.vim-highlight .syn-emphasis,.vim-highlight .syn-keyword{font-weight:400}
 @media(max-width:700px){.vim-code pre{padding:12px 14px;font-size:13px}}
 
 .hero-links #language-toggle{display:inline-flex;align-items:center;gap:6px;margin-left:auto;padding:0;border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:500;line-height:1.5}.hero-links #language-toggle:hover{color:var(--blue)}.hero-links #language-toggle svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}.hero-links #language-toggle span{font-size:12px}
@@ -30,7 +31,7 @@
 @media(max-width:700px){.terminal{width:100%}.terminal-lines{font-size:14px}.terminal-input-line,.terminal-command-history{font-size:14px}}
 
 /* Give the terminal transcript a little more vertical room. */
-.terminal-screen{height:clamp(420px,50vh,600px)}
-@media(max-width:700px){.terminal-screen{height:440px}}
+.terminal-screen{height:clamp(500px,60vh,720px)}
+@media(max-width:700px){.terminal-screen{height:500px}}
 
 .terminal-input-line .prompt-symbol{color:#2779d8}
