@@ -301,7 +301,14 @@ if (form) {
           if (!response.ok) throw new Error(`${isEnglish ? 'File read failed' : '文件读取失败'} (${response.status}).`);
           content = await response.text();
         } else throw new Error(isEnglish ? 'GitHub API did not return file contents.' : 'GitHub API 未返回文件内容。');
-        if (verb === 'cat') { addLine(''); content.split('\n').forEach(line => addLine(line)); }
+        if (verb === 'cat') {
+          addLine('');
+          const ext = folders.at(-1).split('.').pop().toLowerCase();
+          content.split('\n').forEach(line => {
+            if (['md','markdown','txt','rst'].includes(ext) && /^#{1,6}\s/.test(line)) addMarkdownLine(line.match(/^#{1,6}/)[0], line.replace(/^#{1,6}\s*/, ''));
+            else addLine(line, ['md','markdown','txt','rst'].includes(ext) ? 'file-content prose-line' : 'file-content');
+          });
+        }
         else openVim(['prj', repo, ...folders].join('/'), content);
       } else addLine(`${isEnglish ? 'Command not found: ' : '未找到命令：'}${verb}. ${isEnglish ? 'Type help for commands.' : '输入 help 查看可用命令。'}`, 'error');
     } catch (error) { addLine(error.message || (isEnglish ? 'Read failed; please try again.' : '读取失败，请稍后再试。'), 'error'); }
@@ -319,6 +326,31 @@ if (form) {
   });
   const vimViewer = document.getElementById('vim-viewer');
   const vimContent = document.getElementById('vim-content');
+  const vimHighlight = document.getElementById('vim-highlight');
+  function highlightVimText(filename, content) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const escapeHtml = value => value.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const kind = ['md','markdown','txt','rst'].includes(ext) ? 'prose' : ['json','yml','yaml','toml'].includes(ext) ? 'data' : ['js','jsx','ts','tsx','py','go','rs','c','cpp','java','sh','css','html'].includes(ext) ? 'code' : 'plain';
+    vimHighlight.className = `vim-highlight vim-${kind}`;
+    if (kind === 'prose') {
+      vimHighlight.innerHTML = content.split('\n').map(line => {
+        const escaped = escapeHtml(line);
+        if (/^#{1,6}\s/.test(line)) return `<span class="syn-heading">${escaped}</span>`;
+        if (/^\s*([-*+] |\d+\. )/.test(line)) return `<span class="syn-list">${escaped}</span>`;
+        if (/^\s*>/.test(line)) return `<span class="syn-quote">${escaped}</span>`;
+        return escaped.replace(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g, '<span class="syn-emphasis">$1</span>');
+      }).join('\n');
+    } else if (kind === 'code' || kind === 'data') {
+      const tokenPattern = /(\/\/.*$|#.*$|\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b(?:const|let|var|function|return|if|else|for|while|class|import|from|export|async|await|new|def|self|in|with|as|try|except|true|false|null|None|True|False)\b|\b\d+(?:\.\d+)?\b)/gm;
+      let html = '', last = 0, match;
+      while ((match = tokenPattern.exec(content))) {
+        html += escapeHtml(content.slice(last, match.index));
+        const token = match[0], cls = /^(\/\/|#|\/\*)/.test(token) ? 'syn-comment' : /^["'`]/.test(token) ? 'syn-string' : /^\d/.test(token) ? 'syn-number' : 'syn-keyword';
+        html += `<span class="${cls}">${escapeHtml(token)}</span>`; last = tokenPattern.lastIndex;
+      }
+      vimHighlight.innerHTML = html + escapeHtml(content.slice(last));
+    } else vimHighlight.textContent = content;
+  }
   let vimLineHeight = 22;
   let visualMode = null;
   let visualAnchor = 0;
@@ -377,6 +409,7 @@ if (form) {
   }
   function openVim(filename, content) {
     document.getElementById('vim-filename').textContent = filename;
+    highlightVimText(filename, content);
     vimContent.textContent = content;
     vimViewer.hidden = false;
     vimLineHeight = parseFloat(getComputedStyle(vimContent).lineHeight) || 22;
