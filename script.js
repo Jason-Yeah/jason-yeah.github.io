@@ -335,9 +335,9 @@ if (form) {
     if (kind === 'prose') {
       vimHighlight.innerHTML = content.split('\n').map(line => {
         const escaped = escapeHtml(line);
-        if (/^#{1,6}\s/.test(line)) return `<span class="syn-heading">${escaped}</span>`;
-        if (/^\s*([-*+] |\d+\. )/.test(line)) return `<span class="syn-list">${escaped}</span>`;
-        if (/^\s*>/.test(line)) return `<span class="syn-quote">${escaped}</span>`;
+        if (/^#{1,6}\s/.test(line)) return `<span class="syn-heading"><span class="syn-marker">${line.match(/^#{1,6}/)[0]}</span>${escapeHtml(line.replace(/^#{1,6}\s*/, ''))}</span>`;
+        if (/^\s*([-*+] |\d+\. )/.test(line)) return `<span class="syn-list"><span class="syn-marker">${escapeHtml(line.match(/^\s*(?:[-*+]|\d+\.)/)[0])}</span>${escapeHtml(line.replace(/^\s*(?:[-*+] |\d+\. )/, ''))}</span>`;
+        if (/^\s*>/.test(line)) return `<span class="syn-quote"><span class="syn-marker">&gt;</span>${escapeHtml(line.replace(/^\s*&gt;?\s?/, ''))}</span>`;
         return escaped.replace(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g, '<span class="syn-emphasis">$1</span>');
       }).join('\n');
     } else if (kind === 'code' || kind === 'data') {
